@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ANSHU RUNNER | PRO EDITION — GLB FIXED</title>
+    <title>ANSHU RUNNER | PRO EDITION — GLB DEBUG</title>
     
-    <!-- THREE.JS & ESSENTIAL LIBRARIES (MODERN JSM) -->
+    <!-- THREE.JS MODULES -->
     <script type="importmap">
         {
             "imports": {
@@ -32,7 +32,6 @@
             font-family: 'Outfit', sans-serif;
             background: #000;
             overflow: hidden;
-            color: #1C1C1E;
         }
         canvas { display: block; }
 
@@ -47,6 +46,7 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
+            overflow-y: auto;
         }
         .progress-container {
             width: 80%;
@@ -65,17 +65,27 @@
         }
         #debug-log {
             margin-top: 20px;
-            font-size: 10px;
-            color: #8E8E93;
+            font-size: 11px;
+            color: #1c1c1e;
             font-family: monospace;
-            max-height: 120px;
+            max-height: 250px;
             overflow-y: auto;
-            width: 90%;
-            text-align: center;
+            width: 95%;
             background: #f5f5f7;
             border-radius: 16px;
-            padding: 8px;
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
         }
+        .log-entry {
+            border-bottom: 1px solid #e5e5ea;
+            padding: 4px 0;
+            font-size: 10px;
+        }
+        .log-error { color: #ff3b30; }
+        .log-success { color: #34c759; }
+        .log-info { color: #007aff; }
+        
         .glass {
             background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(20px);
@@ -91,6 +101,7 @@
             font-size: 1.2rem;
             box-shadow: 0 8px 20px rgba(0,122,255,0.3);
             transition: transform 0.1s;
+            cursor: pointer;
         }
         .btn-primary:active { transform: scale(0.97); }
         .char-card {
@@ -117,26 +128,18 @@
             padding: 40px 24px;
         }
         .hidden { display: none !important; }
-        #jump-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 20px;
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: rgba(0,0,0,0.3);
-            backdrop-filter: blur(12px);
-            border: 2px solid white;
-            z-index: 20;
-        }
-        .particle-effect {
+        
+        /* floating coins effect */
+        .floating-coin {
             position: fixed;
             pointer-events: none;
+            font-size: 24px;
+            animation: floatUp 0.8s ease-out forwards;
             z-index: 200;
         }
-        @keyframes coinPop {
-            0% { transform: scale(0.2); opacity: 1; }
-            100% { transform: scale(1.5); opacity: 0; top: -30px; }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(0.5); }
+            100% { opacity: 0; transform: translateY(-80px) scale(1); }
         }
     </style>
 </head>
@@ -145,9 +148,13 @@
 <div id="loader-ui">
     <h1 class="text-5xl font-black italic tracking-tighter">ANSHU RUNNER</h1>
     <div class="progress-container"><div id="progress-bar"></div></div>
-    <p id="load-text" class="mt-4 font-bold text-gray-500 text-xs uppercase tracking-widest">LOADING .GLB ASSETS...</p>
-    <div id="debug-log">⚡ Waiting for models... (ensure .glbl files in same folder)</div>
-    <button id="skip-btn" onclick="forceStartFallback()" class="hidden mt-6 px-6 py-2 bg-gray-200 rounded-full text-xs font-bold">SKIP & FALLBACK</button>
+    <p id="load-text" class="mt-4 font-bold text-gray-500 text-xs uppercase tracking-widest">LOADING .GLB MODELS...</p>
+    <div id="debug-log">
+        <div class="log-entry log-info">🔍 Starting model loader...</div>
+        <div class="log-entry log-info">📁 Looking for .glb files in same folder as index.html</div>
+    </div>
+    <button id="skip-btn" onclick="forceStartFallback()" class="hidden mt-4 px-6 py-2 bg-gray-200 rounded-full text-xs font-bold">⚠️ SKIP & USE FALLBACKS</button>
+    <p class="text-[9px] text-gray-400 mt-3">If models don't load, check browser console (F12) for errors</p>
 </div>
 
 <!-- MAIN MENU -->
@@ -224,19 +231,17 @@
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     
-    // ---------- CRITICAL: FIXED PATHS & EXTENSIONS (.glbl as per screenshot) ----------
+    // ---------- CONFIGURATION ----------
     const ASSET_PATH = "./";     // same folder as index.html
-    const MODEL_EXT = ".glbl";   // 🔥 FIX: users files are .glbl not .glb
+    const MODEL_EXT = ".glb";    // ✅ CORRECT EXTENSION
     
-    // ----- GLOBAL CONFIG -----
+    // ----- GLOBAL VARIABLES -----
     const LANE_POSITIONS = [-3.5, 0, 3.5];
     const GROUND_SEGMENT_LEN = 18;
-    const OBSTACLE_SPAWN_RATE = 0.32;
     
-    // Game state
     let gameActive = false;
     let currentScore = 0;
-    let sessionCoinsCollected = 0;
+    let sessionCoins = 0;
     let currentLaneIndex = 1;
     let currentSpeed = 0.68;
     let isJumping = false;
@@ -247,7 +252,7 @@
     let policeCar = null;
     let clock = new THREE.Clock();
     
-    // Three.js essentials
+    // Three.js core
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0b2b44);
     scene.fog = new THREE.FogExp2(0x0b2b44, 0.008);
@@ -283,63 +288,116 @@
     const obstacleGroup = new THREE.Group();
     scene.add(worldGroup, obstacleGroup);
     
-    // --- ASSET LOADER (GLB with .glbl) ---
-    const modelsCache = new Map(); // id -> THREE.Group
+    // --- ASSET LOADER (GLB) with detailed logging ---
+    const modelsCache = new Map();
     const filesToLoad = [
-        { id: 'player1', file: 'player1' + MODEL_EXT },
-        { id: 'player2', file: 'player2' + MODEL_EXT },
-        { id: 'player3', file: 'player3' + MODEL_EXT },
-        { id: 'police', file: 'police' + MODEL_EXT },
-        { id: 'train', file: 'train' + MODEL_EXT },
-        { id: 'coin', file: 'Coin' + MODEL_EXT },   // exact as screenshot: Coin.glbl
-        { id: 'building1', file: 'building1' + MODEL_EXT },
-        { id: 'building2', file: 'building2' + MODEL_EXT },
-        { id: 'track', file: 'track' + MODEL_EXT }
+        { id: 'player1', file: 'player1.glb' },
+        { id: 'player2', file: 'player2.glb' },
+        { id: 'player3', file: 'player3.glb' },
+        { id: 'police', file: 'police.glb' },
+        { id: 'train', file: 'train.glb' },
+        { id: 'coin', file: 'Coin.glb' },      // exactly as in screenshot
+        { id: 'building1', file: 'building1.glb' },
+        { id: 'building2', file: 'building2.glb' },
+        { id: 'track', file: 'track.glb' }
     ];
     
     let loadedCount = 0;
     const totalModels = filesToLoad.length;
-    const debugLog = document.getElementById('debug-log');
-    function addLog(msg) { debugLog.innerHTML += `✓ ${msg}<br>`; debugLog.scrollTop = debugLog.scrollHeight; if(debugLog.children.length > 12) debugLog.removeChild(debugLog.children[0]); }
+    const debugContainer = document.getElementById('debug-log');
+    
+    function addLog(message, type = 'info') {
+        const div = document.createElement('div');
+        div.className = `log-entry log-${type}`;
+        div.innerHTML = `🕒 ${new Date().toLocaleTimeString()} — ${message}`;
+        debugContainer.appendChild(div);
+        div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        console.log(`[${type.toUpperCase()}] ${message}`);
+    }
     
     function updateProgress() {
         const percent = (loadedCount / totalModels) * 100;
         document.getElementById('progress-bar').style.width = percent + '%';
-        document.getElementById('load-text').innerText = `LOADING MODELS... ${Math.floor(percent)}%`;
+        document.getElementById('load-text').innerText = `LOADING .GLB MODELS... ${Math.floor(percent)}%`;
     }
     
-    const loader = new GLTFLoader();
+    // Create a fallback colored cube/primitive when GLB fails
     function createFallbackModel(id) {
+        addLog(`Creating fallback for ${id}`, 'error');
         const group = new THREE.Group();
         let geometry, material;
-        if(id.includes('player')) { geometry = new THREE.BoxGeometry(0.9, 1.6, 0.9); material = new THREE.MeshStandardMaterial({ color: 0x3a86ff }); }
-        else if(id === 'coin') { geometry = new THREE.CylinderGeometry(0.45, 0.45, 0.15, 16); material = new THREE.MeshStandardMaterial({ color: 0xffcc44, emissive: 0x442200 }); group.rotation.x = Math.PI/2; }
-        else if(id === 'train') { geometry = new THREE.BoxGeometry(2.4, 2.2, 5); material = new THREE.MeshStandardMaterial({ color: 0xcc3333 }); }
-        else if(id === 'police') { geometry = new THREE.BoxGeometry(1.2, 1.2, 2.2); material = new THREE.MeshStandardMaterial({ color: 0x2255ff }); }
-        else { geometry = new THREE.BoxGeometry(1.8, 1.8, 1.8); material = new THREE.MeshStandardMaterial({ color: 0x88aaff }); }
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        group.add(mesh);
-        addLog(`⚠️ Fallback created for ${id}`);
+        const colorMap = {
+            player1: 0x3a86ff, player2: 0x9c27b0, player3: 0xff5722,
+            police: 0x2255ff, train: 0xcc3333, coin: 0xffcc44,
+            building1: 0x88aadd, building2: 0x6699cc, track: 0x555555
+        };
+        const color = colorMap[id] || 0x888888;
+        material = new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.2 });
+        
+        if(id.includes('player')) {
+            geometry = new THREE.BoxGeometry(0.9, 1.6, 0.9);
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            group.add(mesh);
+        } else if(id === 'coin') {
+            geometry = new THREE.CylinderGeometry(0.45, 0.45, 0.15, 16);
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            group.add(mesh);
+            group.rotation.x = Math.PI/2;
+        } else if(id === 'train') {
+            geometry = new THREE.BoxGeometry(2.4, 2.2, 5);
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            group.add(mesh);
+        } else if(id === 'police') {
+            geometry = new THREE.BoxGeometry(1.2, 1.2, 2.2);
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            group.add(mesh);
+        } else if(id === 'track') {
+            geometry = new THREE.PlaneGeometry(12, 18);
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.rotation.x = -Math.PI/2;
+            mesh.receiveShadow = true;
+            group.add(mesh);
+        } else {
+            geometry = new THREE.BoxGeometry(1.8, 1.8, 1.8);
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            group.add(mesh);
+        }
         return group;
     }
     
+    const loader = new GLTFLoader();
+    
+    // Load each model
     filesToLoad.forEach(item => {
-        loader.load(ASSET_PATH + item.file, 
+        const fullPath = ASSET_PATH + item.file;
+        addLog(`Attempting to load: ${fullPath}`, 'info');
+        loader.load(fullPath, 
             (gltf) => {
                 const model = gltf.scene;
-                model.traverse(node => { if(node.isMesh) { node.castShadow = true; node.receiveShadow = true; } });
+                model.traverse(node => {
+                    if(node.isMesh) {
+                        node.castShadow = true;
+                        node.receiveShadow = true;
+                    }
+                });
                 modelsCache.set(item.id, model);
                 loadedCount++;
-                addLog(`✅ Loaded: ${item.file}`);
+                addLog(`✅ SUCCESS: ${item.file}`, 'success');
                 updateProgress();
                 if(loadedCount === totalModels) onAllModelsLoaded();
             },
-            (xhr) => {},
+            (xhr) => {
+                // optional progress
+            },
             (error) => {
-                console.error(`Failed ${item.file}`, error);
-                addLog(`❌ Failed ${item.file} → using placeholder`);
+                console.error(`❌ Error loading ${item.file}:`, error);
+                addLog(`❌ FAILED: ${item.file} — ${error.message || 'Network/File error'}`, 'error');
                 modelsCache.set(item.id, createFallbackModel(item.id));
                 loadedCount++;
                 updateProgress();
@@ -348,20 +406,25 @@
         );
     });
     
-    // Timer to force start after 6 secs if some models stuck
-    setTimeout(() => {
-        if(loadedCount < totalModels && !window._menuInitialized) {
-            addLog("⚠️ Force start: using fallbacks for missing models");
-            filesToLoad.forEach(item => { if(!modelsCache.has(item.id)) modelsCache.set(item.id, createFallbackModel(item.id)); });
+    // Force start after 8 seconds if some models are stuck
+    let fallbackTimer = setTimeout(() => {
+        if(loadedCount < totalModels && !window._menuReady) {
+            addLog("⚠️ Timeout: forcing start with fallbacks for missing models", 'error');
+            filesToLoad.forEach(item => {
+                if(!modelsCache.has(item.id)) {
+                    modelsCache.set(item.id, createFallbackModel(item.id));
+                    addLog(`Forced fallback for ${item.id}`, 'error');
+                }
+            });
             onAllModelsLoaded();
         }
-    }, 6500);
+    }, 8000);
     
-    // ----- World construction (infinite tile system) -----
+    // ----- WORLD CONSTRUCTION -----
     let activeTiles = [];
+    
     function buildTile(zPos) {
         const tileGroup = new THREE.Group();
-        // Track piece
         const trackModel = modelsCache.get('track');
         if(trackModel) {
             const trackPiece = trackModel.clone();
@@ -372,13 +435,9 @@
             groundPlane.rotation.x = -Math.PI/2;
             groundPlane.receiveShadow = true;
             tileGroup.add(groundPlane);
-            const lineMark = new THREE.Mesh(new THREE.PlaneGeometry(0.2, GROUND_SEGMENT_LEN), new THREE.MeshStandardMaterial({ color: 0xffaa55 }));
-            lineMark.rotation.x = -Math.PI/2;
-            lineMark.position.y = 0.02;
-            tileGroup.add(lineMark);
         }
         
-        // Decorative buildings on sides
+        // Buildings
         const buildingLeft = modelsCache.get('building1')?.clone() || createFallbackModel('building1');
         buildingLeft.position.set(-7.5, 0, 0);
         buildingLeft.scale.set(1.2, 1.2 + Math.random() * 0.6, 1.2);
@@ -408,20 +467,17 @@
             activeTiles[i].position.z += deltaMove;
             if(activeTiles[i].position.z > 18) {
                 activeTiles[i].position.z -= (activeTiles.length * GROUND_SEGMENT_LEN);
-                // spawn random obstacles near the recycled tile
                 spawnObstaclesOnTile(activeTiles[i].position.z);
             }
         }
     }
     
-    // Obstacle spawning
     function spawnObstaclesOnTile(zPos) {
         if(!gameActive) return;
         const rand = Math.random();
-        if(rand < OBSTACLE_SPAWN_RATE) {
+        if(rand < 0.35) {
             const laneIdx = Math.floor(Math.random() * 3);
             const laneX = LANE_POSITIONS[laneIdx];
-            // Train obstacle (police/car barrier)
             if(Math.random() > 0.45) {
                 const trainCopy = modelsCache.get('train')?.clone() || createFallbackModel('train');
                 trainCopy.position.set(laneX, 0.2, zPos + 2);
@@ -429,18 +485,16 @@
                 trainCopy.traverse(c => c.isMesh && (c.castShadow = true));
                 obstacleGroup.add(trainCopy);
             } else {
-                // coin cluster
                 for(let k = -1; k <= 1; k++) {
                     const coinModel = modelsCache.get('coin')?.clone() || createFallbackModel('coin');
                     coinModel.position.set(laneX + (k*0.8), 1.1, zPos + k*2.5);
                     coinModel.userData = { type: 'coin', value: 10 };
-                    coinModel.traverse(c => { if(c.isMesh) { c.castShadow = true; } });
+                    coinModel.traverse(c => { if(c.isMesh) c.castShadow = true; });
                     obstacleGroup.add(coinModel);
                 }
             }
         }
-        // extra random coin bonus
-        if(Math.random() < 0.25) {
+        if(Math.random() < 0.2) {
             const bonusCoin = modelsCache.get('coin')?.clone() || createFallbackModel('coin');
             const randomLane = LANE_POSITIONS[Math.floor(Math.random()*3)];
             bonusCoin.position.set(randomLane, 1.1, zPos + 1);
@@ -449,7 +503,6 @@
         }
     }
     
-    // Player & Police setup
     function setupPlayerAndPolice() {
         if(playerModel) scene.remove(playerModel);
         const selectedId = state.selectedChar;
@@ -469,15 +522,24 @@
         scene.add(policeCar);
     }
     
-    // Collision & update
+    function createCoinParticleEffect(pos) {
+        // visual effect only
+        const geom = new THREE.SphereGeometry(0.12, 6, 6);
+        const material = new THREE.MeshStandardMaterial({ color: 0xffaa33, emissive: 0x442200 });
+        for(let i=0;i<5;i++) {
+            const particle = new THREE.Mesh(geom, material);
+            particle.position.copy(pos);
+            scene.add(particle);
+            gsap.to(particle.position, { y: pos.y + 1.0, x: pos.x + (Math.random()-0.5)*0.8, duration: 0.4, ease: "power1.out" });
+            gsap.to(particle.scale, { x: 0, y: 0, duration: 0.5, delay: 0.2, onComplete: () => scene.remove(particle) });
+        }
+    }
+    
     function updateGameLogic() {
         if(!gameActive) return;
-        // Move obstacles
         obstacleGroup.children.forEach((obj, idx) => {
             obj.position.z += currentSpeed;
-            // Coin rotation animation
             if(obj.userData.type === 'coin') obj.rotation.y += 0.08;
-            // Collision detection
             const playerPos = playerModel.position;
             const dx = Math.abs(obj.position.x - playerPos.x);
             const dz = Math.abs(obj.position.z - playerPos.z);
@@ -485,12 +547,11 @@
             if(dx < 1.2 && dz < 1.3 && dy < 1.5) {
                 if(obj.userData.type === 'coin') {
                     const coinVal = obj.userData.value || 10;
-                    sessionCoinsCollected += coinVal;
+                    sessionCoins += coinVal;
                     state.totalCoins += coinVal;
-                    document.getElementById('session-coins').innerText = sessionCoinsCollected;
-                    // floating +1 effect
-                    obstacleGroup.remove(obj);
+                    document.getElementById('session-coins').innerText = sessionCoins;
                     createCoinParticleEffect(obj.position.clone());
+                    obstacleGroup.remove(obj);
                 } else if(obj.userData.type === 'obstacle' || obj.userData.damage) {
                     gameOverSequence();
                 }
@@ -498,11 +559,9 @@
             if(obj.position.z > 20 || obj.position.z < -25) obstacleGroup.remove(obj);
         });
         
-        // Lane interpolation
         const targetX = LANE_POSITIONS[currentLaneIndex];
         playerModel.position.x += (targetX - playerModel.position.x) * 0.25;
         
-        // Jump physics
         if(isJumping) {
             playerModel.position.y += verticalVelocity;
             verticalVelocity -= 0.025;
@@ -519,7 +578,6 @@
             playerModel.position.y = 0.2;
         }
         
-        // Camera follow & police chase
         camera.position.x += (playerModel.position.x * 0.35 - camera.position.x) * 0.08;
         camera.position.z = 10 + (playerModel.position.z * 0.02);
         camera.lookAt(playerModel.position.x * 0.6, 1.5, playerModel.position.z - 3);
@@ -528,23 +586,9 @@
             policeCar.position.z = 7.5 + Math.sin(Date.now() * 0.008) * 0.6;
         }
         
-        // Score increment
         currentScore += Math.floor(currentSpeed * 2.2);
         document.getElementById('score-val').innerText = Math.floor(currentScore / 8);
-        // Speed gradually increase
         if(currentSpeed < 1.9) currentSpeed += 0.0008;
-    }
-    
-    function createCoinParticleEffect(pos) {
-        const geom = new THREE.SphereGeometry(0.12, 6, 6);
-        const material = new THREE.MeshStandardMaterial({ color: 0xffaa33, emissive: 0x442200 });
-        for(let i=0;i<6;i++) {
-            const particle = new THREE.Mesh(geom, material);
-            particle.position.copy(pos);
-            scene.add(particle);
-            gsap.to(particle.position, { y: pos.y + 1.2, x: pos.x + (Math.random()-0.5)*0.8, duration: 0.4, ease: "power1.out" });
-            gsap.to(particle.scale, { x: 0, y: 0, duration: 0.5, delay: 0.2, onComplete: () => scene.remove(particle) });
-        }
     }
     
     function gameOverSequence() {
@@ -557,15 +601,14 @@
             localStorage.setItem('anshu_highScore_pro', state.highScore);
         }
         document.getElementById('final-score').innerText = finalScoreVal;
-        document.getElementById('final-coins').innerText = sessionCoinsCollected;
+        document.getElementById('final-coins').innerText = sessionCoins;
         document.getElementById('game-over').classList.remove('hidden');
         document.getElementById('hud').classList.add('hidden');
     }
     
-    // ----- Animation Loop -----
+    // Animation loop
     function animate() {
         requestAnimationFrame(animate);
-        const delta = Math.min(clock.getDelta(), 0.033);
         if(gameActive) {
             updateTiles();
             updateGameLogic();
@@ -574,7 +617,7 @@
     }
     animate();
     
-    // ----- Game State & UI -----
+    // ----- GAME STATE & UI -----
     let state = {
         totalCoins: parseInt(localStorage.getItem('anshu_coins_pro')) || 0,
         highScore: parseInt(localStorage.getItem('anshu_highScore_pro')) || 0,
@@ -601,7 +644,7 @@
             state.selectedChar = id;
             localStorage.setItem('anshu_selected_pro', id);
             updateShopUI();
-            if(gameActive === false && playerModel) setupPlayerAndPolice();
+            if(!gameActive && playerModel) setupPlayerAndPolice();
         } else {
             if(state.totalCoins >= prices[id]) {
                 state.totalCoins -= prices[id];
@@ -623,21 +666,18 @@
         document.getElementById('menu-screen').classList.add('hidden');
         document.getElementById('hud').classList.remove('hidden');
         document.getElementById('game-over').classList.add('hidden');
-        // Reset state
         gameActive = true;
         currentScore = 0;
-        sessionCoinsCollected = 0;
+        sessionCoins = 0;
         currentSpeed = 0.7;
         currentLaneIndex = 1;
         isJumping = false;
         isSliding = false;
         document.getElementById('score-val').innerText = "0";
         document.getElementById('session-coins').innerText = "0";
-        // Clear obstacles
         while(obstacleGroup.children.length) obstacleGroup.remove(obstacleGroup.children[0]);
         initWorldTiles();
         setupPlayerAndPolice();
-        // initial obstacles
         for(let i = -1; i <= 3; i++) spawnObstaclesOnTile(i * GROUND_SEGMENT_LEN);
     };
     
@@ -645,10 +685,10 @@
         if(gameActive) { gameActive = false; Swal.fire({ title: 'Paused', text: 'Tap Resume', confirmButtonText: 'RUN', showCancelButton: false, timer: 2000 }).then(()=>{ gameActive = true; }); }
     };
     
-    window.toggleFullscreenMode = () => { if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); else if(document.documentElement.webkitRequestFullscreen) document.documentElement.webkitRequestFullscreen(); };
+    window.toggleFullscreenMode = () => { if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); };
     window.resetAllProgress = () => { localStorage.clear(); location.reload(); };
     
-    // Input handling: Keyboard & Touch
+    // Input handling
     window.addEventListener('keydown', (e) => {
         if(!gameActive) return;
         if(e.key === 'ArrowLeft' && currentLaneIndex > 0) currentLaneIndex--;
@@ -672,18 +712,25 @@
     });
     
     function onAllModelsLoaded() {
+        clearTimeout(fallbackTimer);
+        addLog("🎉 ALL MODELS LOADED SUCCESSFULLY! Game ready.", 'success');
         document.getElementById('loader-ui').classList.add('hidden');
         document.getElementById('menu-screen').classList.remove('hidden');
         updateShopUI();
         initWorldTiles();
         setupPlayerAndPolice();
-        // pre-populate some obstacles decoration
         for(let i = -2; i <= 4; i++) spawnObstaclesOnTile(i * GROUND_SEGMENT_LEN);
-        window._menuInitialized = true;
-        addLog("🚀 GAME READY | GLB FILES LOADED CORRECTLY (extensions .glbl)");
+        window._menuReady = true;
     }
+    
     window.forceStartFallback = function() {
-        filesToLoad.forEach(item => { if(!modelsCache.has(item.id)) modelsCache.set(item.id, createFallbackModel(item.id)); });
+        addLog("Force start activated — using fallbacks for any missing models", 'error');
+        filesToLoad.forEach(item => {
+            if(!modelsCache.has(item.id)) {
+                modelsCache.set(item.id, createFallbackModel(item.id));
+                addLog(`Force fallback created for ${item.id}`, 'error');
+            }
+        });
         onAllModelsLoaded();
     };
     
