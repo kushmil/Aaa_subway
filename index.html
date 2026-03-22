@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anshu Runner</title>
+    <title>Anshu Runner | GitHub Fix</title>
     
     <!-- CDNs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
@@ -13,100 +13,68 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        body { margin: 0; overflow: hidden; font-family: sans-serif; background: #000; touch-action: none; user-select: none; }
+        body { margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto; background: #87CEEB; touch-action: none; user-select: none; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
         .clickable { pointer-events: auto; }
-        .ios-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border-radius: 24px; }
-        .active-char { border: 4px solid #007AFF; transform: scale(1.05); }
-        #loading-screen { position: fixed; inset: 0; background: white; z-index: 100; display: flex; flex-direction: column; items-center; justify-content: center; }
+        .ios-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(15px); border-radius: 28px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+        #loading-screen { position: fixed; inset: 0; background: white; z-index: 100; display: flex; flex-direction: column; items-center; justify-content: center; text-align: center; }
+        .btn-blue { background: #007AFF; color: white; padding: 18px 0; border-radius: 20px; font-weight: 800; width: 100%; font-size: 1.25rem; transition: transform 0.1s; }
+        .btn-blue:active { transform: scale(0.96); }
     </style>
 </head>
 <body>
 
+    <!-- LOADING SCREEN -->
     <div id="loading-screen">
-        <h1 class="text-2xl font-black mb-4">LOADING ASSETS...</h1>
-        <div class="w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div id="load-progress" class="h-full bg-blue-600" style="width: 0%"></div>
+        <h1 class="text-4xl font-black mb-2 italic">ANSHU RUNNER</h1>
+        <p id="load-status" class="text-gray-400 font-bold text-sm uppercase tracking-widest">Loading Models...</p>
+        <div class="w-64 h-2 bg-gray-100 rounded-full mt-6 overflow-hidden">
+            <div id="load-bar" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%"></div>
         </div>
     </div>
 
     <!-- START MENU -->
-    <div id="menu-screen" class="fixed inset-0 z-20 flex flex-col items-center justify-between py-12 px-6 bg-white">
+    <div id="menu-screen" class="fixed inset-0 z-20 flex flex-col items-center justify-between py-16 px-8 bg-white hidden">
         <div class="text-center">
-            <h1 class="text-5xl font-black text-gray-900 italic">ANSHU<br><span class="text-blue-600">RUNNER</span></h1>
-            <p class="text-gray-400 mt-2 font-bold uppercase text-xs">High Score: <span id="menu-high-score">0</span></p>
+            <h1 class="text-5xl font-black text-gray-900 italic leading-tight">ANSHU<br><span class="text-blue-600">RUNNER</span></h1>
+            <div class="mt-4 bg-gray-100 px-4 py-1 rounded-full text-xs font-bold text-gray-500">HIGH SCORE: <span id="high-score">0</span></div>
         </div>
 
-        <div class="w-full max-w-sm">
-            <div class="flex justify-around mb-8">
-                <div onclick="selectPlayer(1)" id="card-1" class="clickable ios-card p-4 text-center w-24">
-                    <div class="text-2xl mb-1">🏃</div>
-                    <span class="text-[10px] font-bold">FREE</span>
-                </div>
-                <div onclick="selectPlayer(2)" id="card-2" class="clickable ios-card p-4 text-center w-24 relative">
-                    <div id="lock-2" class="absolute -top-2 -right-2">🔒</div>
-                    <div class="text-2xl mb-1">🏄</div>
-                    <span class="text-[10px] font-bold">500</span>
-                </div>
-                <div onclick="selectPlayer(3)" id="card-3" class="clickable ios-card p-4 text-center w-24 relative">
-                    <div id="lock-3" class="absolute -top-2 -right-2">🔒</div>
-                    <div class="text-2xl mb-1">🤖</div>
-                    <span class="text-[10px] font-bold">1000</span>
-                </div>
+        <div class="w-full max-w-xs space-y-6">
+            <div class="flex justify-center gap-4">
+                <div class="text-2xl font-bold">🪙 <span id="menu-coins">0</span></div>
             </div>
-
-            <button onclick="startGame()" class="clickable w-full bg-blue-600 text-white py-5 rounded-[20px] text-xl font-bold shadow-lg active:scale-95 transition-transform">
-                START GAME
-            </button>
-        </div>
-
-        <div class="flex gap-4 items-center">
-            <div class="text-2xl font-bold">🪙 <span id="menu-coins">0</span></div>
-            <button onclick="toggleFullscreen()" class="clickable p-4 bg-gray-100 rounded-full">📱 FULLSCREEN</button>
+            <button onclick="startGame()" class="clickable btn-blue shadow-lg shadow-blue-200">START GAME</button>
+            <button onclick="toggleFullscreen()" class="clickable w-full text-gray-400 font-bold text-sm">📱 FULLSCREEN MODE</button>
         </div>
     </div>
 
     <!-- HUD -->
-    <div id="hud" class="fixed top-0 left-0 w-full p-6 flex justify-between items-start z-10 hidden">
-        <div class="ios-card px-4 py-2 shadow-md">
-            <p class="text-[10px] font-bold text-gray-400 uppercase">Score</p>
-            <p id="current-score" class="text-2xl font-black text-gray-800">0</p>
+    <div id="hud" class="fixed top-0 left-0 w-full p-6 flex justify-between items-start z-10 hidden pointer-events-none">
+        <div class="ios-card px-5 py-3">
+            <p class="text-[10px] font-black text-gray-400 uppercase">Score</p>
+            <p id="score-val" class="text-2xl font-black text-gray-800">0</p>
         </div>
-        <div class="ios-card px-4 py-2 shadow-md flex items-center gap-2">
-            <span class="text-yellow-500 font-bold">🪙</span>
-            <span id="game-coins" class="text-xl font-bold">0</span>
+        <div class="ios-card px-5 py-3 flex items-center gap-2">
+            <span class="text-xl">🪙</span>
+            <span id="coin-val" class="text-xl font-bold">0</span>
         </div>
-    </div>
-
-    <!-- GAME OVER -->
-    <div id="game-over" class="fixed inset-0 z-30 bg-white/90 flex flex-col items-center justify-center p-6 hidden text-center">
-        <h2 class="text-6xl font-black text-red-600 mb-2 italic">BUSTED!</h2>
-        <div class="ios-card p-8 w-full max-w-xs mb-6">
-            <p class="text-gray-400 font-bold">FINAL SCORE</p>
-            <p id="final-score" class="text-4xl font-black mb-4">0</p>
-            <p class="text-gray-400 font-bold">COINS EARNED</p>
-            <p id="final-coins" class="text-2xl font-black">0</p>
-        </div>
-        <button onclick="location.reload()" class="w-full max-w-xs bg-blue-600 text-white py-5 rounded-[20px] text-xl font-bold mb-3">RESTART</button>
     </div>
 
     <div id="game-container"></div>
 
     <script>
-        // --- CONFIGURATION ---
-        const LANES = [-3.5, 0, 3.5];
+        // --- DATA & STATE ---
         let state = {
-            coins: parseInt(localStorage.getItem('anshu_coins')) || 0,
-            highScore: parseInt(localStorage.getItem('anshu_highScore')) || 0,
-            unlocked: JSON.parse(localStorage.getItem('anshu_unlocked')) || [1],
-            selected: parseInt(localStorage.getItem('anshu_selected')) || 1,
             isRunning: false,
-            lane: 1,
-            speed: 0.4,
             score: 0,
             sessionCoins: 0,
-            yVel: 0,
-            isJumping: false
+            coins: parseInt(localStorage.getItem('anshu_coins')) || 0,
+            highScore: parseInt(localStorage.getItem('anshu_highScore')) || 0,
+            lane: 1, // 0: Left, 1: Center, 2: Right
+            speed: 0.4,
+            isJumping: false,
+            yVel: 0
         };
 
         // --- THREE.JS SETUP ---
@@ -115,287 +83,228 @@
         scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 6, 10);
+        camera.position.set(0, 6, 12);
         camera.lookAt(0, 2, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
         document.getElementById('game-container').appendChild(renderer.domElement);
 
-        const world = new THREE.Group();
-        const obstacles = new THREE.Group();
-        scene.add(world, obstacles);
-
-        // Lights
+        // Lighting
         scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.5));
         const sun = new THREE.DirectionalLight(0xffffff, 1);
         sun.position.set(5, 10, 5);
         sun.castShadow = true;
         scene.add(sun);
 
+        const worldGroup = new THREE.Group();
+        const obstacleGroup = new THREE.Group();
+        scene.add(worldGroup, obstacleGroup);
+
         // --- ASSET LOADING ---
-        const loader = new THREE.GLTFLoader();
+        const manager = new THREE.LoadingManager();
+        const loader = new THREE.GLTFLoader(manager);
         const models = {};
-        const toLoad = [
-            { name: 'player1', url: './player1.glb' },
-            { name: 'player2', url: './player2.glb' },
-            { name: 'player3', url: './player3.glb' },
-            { name: 'police', url: './police.glb' },
-            { name: 'train', url: './train.glb' },
-            { name: 'coin', url: './Coin.glb' }, // Note Capital C
-            { name: 'building1', url: './building1.glb' },
-            { name: 'building2', url: './building2.glb' },
-            { name: 'track', url: './track.glb' }
+
+        // EXACT NAMES FROM YOUR GITHUB
+        const files = [
+            'player1.glb', 'player2.glb', 'player3.glb', 
+            'police.glb', 'train.glb', 'Coin.glb', 
+            'building1.glb', 'building2.glb', 'track.glb'
         ];
 
-        let loadedCount = 0;
-        toLoad.forEach(item => {
-            loader.load(item.url, 
-                (gltf) => {
-                    models[item.name] = gltf.scene;
-                    loadedCount++;
-                    document.getElementById('load-progress').style.width = (loadedCount / toLoad.length * 100) + '%';
-                    if(loadedCount === toLoad.length) initGame();
-                },
+        manager.onProgress = (url, itemsLoaded, itemsTotal) => {
+            let p = (itemsLoaded / itemsTotal) * 100;
+            document.getElementById('load-bar').style.width = p + '%';
+        };
+
+        manager.onLoad = () => {
+            setTimeout(showMenu, 500);
+        };
+
+        files.forEach(file => {
+            const name = file.split('.')[0];
+            loader.load(file, 
+                (gltf) => { models[name] = gltf.scene; },
                 undefined,
-                (err) => {
-                    console.error("Error loading " + item.url, err);
-                    // Create fallback box so game doesn't crash
-                    const box = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshStandardMaterial({color: 0xff0000}));
-                    models[item.name] = new THREE.Group().add(box);
-                    loadedCount++;
-                    if(loadedCount === toLoad.length) initGame();
-                }
+                (err) => { console.error("Error loading " + file); }
             );
         });
 
-        let player, police, playerMixer;
-        const trackSegments = [];
+        // --- GAME OBJECTS ---
+        let player, police;
+        const tiles = [];
 
-        function initGame() {
-            document.getElementById('loading-screen').classList.add('hidden');
-            updateUI();
-
-            // Setup Player
+        function initScene() {
+            // Player
             player = new THREE.Group();
-            const charModel = models[`player${state.selected}`].clone();
-            player.add(charModel);
-            player.position.set(0, 0, 0);
+            const body = models['player1'] ? models['player1'].clone() : new THREE.Mesh(new THREE.BoxGeometry(1,2,1), new THREE.MeshStandardMaterial({color: 0x007AFF}));
+            player.add(body);
             scene.add(player);
 
-            // Setup Police
-            police = models['police'].clone();
-            police.position.set(0, 0, 5);
+            // Police
+            police = new THREE.Group();
+            const pBody = models['police'] ? models['police'].clone() : new THREE.Mesh(new THREE.BoxGeometry(1,2,1), new THREE.MeshStandardMaterial({color: 0x000000}));
+            police.add(pBody);
             scene.add(police);
 
-            // Setup Initial Track
-            for(let i=0; i<10; i++) {
-                createSegment(i * -20);
-            }
-
-            animate();
+            // World
+            for(let i=0; i<10; i++) createTile(i * -20);
         }
 
-        function createSegment(z) {
-            const seg = new THREE.Group();
+        function createTile(z) {
+            const tile = new THREE.Group();
             
-            // Use track glb if available, else floor
+            // Track
             if(models['track']) {
-                const t = models['track'].clone();
-                seg.add(t);
+                tile.add(models['track'].clone());
             } else {
-                const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 20), new THREE.MeshStandardMaterial({color: 0x333333}));
-                floor.rotation.x = -Math.PI/2;
-                seg.add(floor);
+                const road = new THREE.Mesh(new THREE.PlaneGeometry(12, 20), new THREE.MeshStandardMaterial({color: 0x333333}));
+                road.rotation.x = -Math.PI/2;
+                tile.add(road);
             }
 
-            // Add side buildings
-            const b1 = models[Math.random() > 0.5 ? 'building1' : 'building2'].clone();
-            b1.position.set(-10, 0, 0);
-            seg.add(b1);
+            // Buildings
+            if(models['building1'] && Math.random() > 0.3) {
+                const b1 = models['building1'].clone();
+                b1.position.set(-10, 0, 0);
+                tile.add(b1);
+                const b2 = models['building2'].clone();
+                b2.position.set(10, 0, 0);
+                tile.add(b2);
+            }
 
-            const b2 = models[Math.random() > 0.5 ? 'building1' : 'building2'].clone();
-            b2.position.set(10, 0, 0);
-            seg.add(b2);
-
-            seg.position.z = z;
-            world.add(seg);
-            trackSegments.push(seg);
-            
-            if(z < -20) spawnStuff(z);
+            tile.position.z = z;
+            worldGroup.add(tile);
+            tiles.push(tile);
         }
 
-        function spawnStuff(z) {
-            const lane = LANES[Math.floor(Math.random()*3)];
+        function spawnObstacle(z) {
+            const lane = [-4, 0, 4][Math.floor(Math.random()*3)];
+            let obj;
             if(Math.random() > 0.4) {
-                const t = models['train'].clone();
-                t.position.set(lane, 0, z);
-                t.userData = { type: 'obstacle' };
-                obstacles.add(t);
+                obj = models['train'] ? models['train'].clone() : new THREE.Mesh(new THREE.BoxGeometry(2, 4, 8), new THREE.MeshStandardMaterial({color: 0xff0000}));
+                obj.userData.type = 'enemy';
             } else {
-                const c = models['coin'].clone();
-                c.position.set(lane, 1.5, z);
-                c.userData = { type: 'coin' };
-                obstacles.add(c);
+                obj = models['Coin'] ? models['Coin'].clone() : new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshStandardMaterial({color: 0xffd700}));
+                obj.userData.type = 'coin';
             }
+            obj.position.set(lane, 0, z);
+            obstacleGroup.add(obj);
         }
 
-        // --- CORE LOOP ---
+        // --- GAME LOOP ---
         function animate() {
             requestAnimationFrame(animate);
-            const dt = 0.016;
-
             if(state.isRunning) {
                 state.speed += 0.0001;
-                state.score += 1;
-                document.getElementById('current-score').innerText = Math.floor(state.score/10);
+                state.score++;
+                document.getElementById('score-val').innerText = Math.floor(state.score/10);
 
-                // Move World
-                trackSegments.forEach(seg => {
-                    seg.position.z += state.speed;
-                    if(seg.position.z > 20) {
-                        seg.position.z -= 200;
-                        spawnStuff(seg.position.z);
+                // World Movement
+                tiles.forEach(t => {
+                    t.position.z += state.speed;
+                    if(t.position.z > 20) {
+                        t.position.z -= 200;
+                        spawnObstacle(t.position.z);
                     }
                 });
 
-                // Move Obstacles
-                obstacles.children.forEach((obj, index) => {
-                    obj.position.z += state.speed;
-                    
-                    if(obj.userData.type === 'coin') obj.rotation.y += 0.05;
+                // Obstacle Movement & Collision
+                obstacleGroup.children.forEach(o => {
+                    o.position.z += state.speed;
+                    if(o.userData.type === 'coin') o.rotation.y += 0.05;
 
-                    // Collision
-                    const dist = obj.position.distanceTo(player.position);
-                    if(dist < 1.8) {
-                        if(obj.userData.type === 'coin') {
+                    const dist = o.position.distanceTo(player.position);
+                    if(dist < 2) {
+                        if(o.userData.type === 'coin') {
                             state.sessionCoins++;
                             state.coins++;
-                            document.getElementById('game-coins').innerText = state.sessionCoins;
-                            obstacles.remove(obj);
+                            document.getElementById('coin-val').innerText = state.sessionCoins;
+                            obstacleGroup.remove(o);
                         } else {
-                            endGame();
+                            gameOver();
                         }
                     }
-
-                    if(obj.position.z > 10) obstacles.remove(obj);
+                    if(o.position.z > 15) obstacleGroup.remove(o);
                 });
 
                 // Player Physics
+                const targetX = [-4, 0, 4][state.lane];
+                player.position.x = THREE.MathUtils.lerp(player.position.x, targetX, 0.15);
+
                 if(state.isJumping) {
                     player.position.y += state.yVel;
-                    state.yVel -= 0.015;
+                    state.yVel -= 0.02;
                     if(player.position.y <= 0) {
                         player.position.y = 0;
                         state.isJumping = false;
                     }
                 }
 
-                // Smooth Lane
-                player.position.x = THREE.MathUtils.lerp(player.position.x, LANES[state.lane], 0.15);
-                
                 // Police Follow
                 police.position.x = player.position.x;
-                police.position.z = 5 + Math.sin(Date.now()*0.005);
+                police.position.z = 6 + Math.sin(Date.now()*0.005);
                 
-                // Camera
                 camera.position.x = player.position.x * 0.5;
+                camera.lookAt(player.position.x, 2, -5);
             }
-
             renderer.render(scene, camera);
         }
 
-        // --- CONTROLS ---
+        // --- LOGIC ---
+        function showMenu() {
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('menu-screen').classList.remove('hidden');
+            document.getElementById('menu-coins').innerText = state.coins;
+            document.getElementById('high-score').innerText = state.highScore;
+            initScene();
+            animate();
+        }
+
         function startGame() {
-            // Fullscreen must be triggered by user click
-            toggleFullscreen();
-            
+            toggleFullscreen(); // Attempt fullscreen on start
             document.getElementById('menu-screen').classList.add('hidden');
             document.getElementById('hud').classList.remove('hidden');
             state.isRunning = true;
         }
 
-        function endGame() {
+        function gameOver() {
             state.isRunning = false;
-            if(state.score/10 > state.highScore) localStorage.setItem('anshu_highScore', Math.floor(state.score/10));
+            if(Math.floor(state.score/10) > state.highScore) {
+                localStorage.setItem('anshu_highScore', Math.floor(state.score/10));
+            }
             localStorage.setItem('anshu_coins', state.coins);
-            
-            document.getElementById('final-score').innerText = Math.floor(state.score/10);
-            document.getElementById('final-coins').innerText = state.sessionCoins;
-            document.getElementById('game-over').classList.remove('hidden');
-            document.getElementById('hud').classList.add('hidden');
-        }
-
-        function move(dir) {
-            if(!state.isRunning) return;
-            state.lane = Math.max(0, Math.min(2, state.lane + dir));
-        }
-
-        function jump() {
-            if(!state.isRunning || state.isJumping) return;
-            state.isJumping = true;
-            state.yVel = 0.4;
-        }
-
-        // Input
-        window.addEventListener('keydown', e => {
-            if(e.key === 'ArrowLeft') move(-1);
-            if(e.key === 'ArrowRight') move(1);
-            if(e.key === 'ArrowUp') jump();
-        });
-
-        let tsX, tsY;
-        window.addEventListener('touchstart', e => { tsX = e.touches[0].clientX; tsY = e.touches[0].clientY; });
-        window.addEventListener('touchend', e => {
-            const dx = e.changedTouches[0].clientX - tsX;
-            const dy = e.changedTouches[0].clientY - tsY;
-            if(Math.abs(dx) > Math.abs(dy)) {
-                if(dx > 30) move(1); else if(dx < -30) move(-1);
-            } else {
-                if(dy < -30) jump();
-            }
-        });
-
-        // UI Helpers
-        function selectPlayer(id) {
-            const prices = { 1:0, 2:500, 3:1000 };
-            if(state.unlocked.includes(id)) {
-                state.selected = id;
-                localStorage.setItem('anshu_selected', id);
-                location.reload(); 
-            } else if(state.coins >= prices[id]) {
-                state.coins -= prices[id];
-                state.unlocked.push(id);
-                localStorage.setItem('anshu_coins', state.coins);
-                localStorage.setItem('anshu_unlocked', JSON.stringify(state.unlocked));
-                location.reload();
-            } else {
-                Swal.fire("Need more coins!");
-            }
-        }
-
-        function updateUI() {
-            document.getElementById('menu-coins').innerText = state.coins;
-            document.getElementById('menu-high-score').innerText = state.highScore;
-            [1,2,3].forEach(id => {
-                if(state.selected === id) document.getElementById(`card-${id}`).classList.add('active-char');
-                if(state.unlocked.includes(id)) {
-                    const lock = document.getElementById(`lock-${id}`);
-                    if(lock) lock.style.display = 'none';
-                }
-            });
+            location.reload(); 
         }
 
         function toggleFullscreen() {
-            let elem = document.documentElement;
-            if (!document.fullscreenElement) {
-                if (elem.requestFullscreen) elem.requestFullscreen();
-                else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-                else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
-            }
+            let el = document.documentElement;
+            if (el.requestFullscreen) el.requestFullscreen();
+            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+            else if (el.msRequestFullscreen) el.msRequestFullscreen();
         }
+
+        // Controls
+        window.addEventListener('touchstart', e => { this.startT = {x: e.touches[0].clientX, y: e.touches[0].clientY}; });
+        window.addEventListener('touchend', e => {
+            let dx = e.changedTouches[0].clientX - this.startT.x;
+            let dy = e.changedTouches[0].clientY - this.startT.y;
+            if(Math.abs(dx) > Math.abs(dy)) {
+                if(dx > 40 && state.lane < 2) state.lane++;
+                if(dx < -40 && state.lane > 0) state.lane--;
+            } else {
+                if(dy < -40 && !state.isJumping) { state.isJumping = true; state.yVel = 0.45; }
+            }
+        });
+
+        window.addEventListener('keydown', e => {
+            if(e.key === 'ArrowLeft' && state.lane > 0) state.lane--;
+            if(e.key === 'ArrowRight' && state.lane < 2) state.lane++;
+            if(e.key === 'ArrowUp' && !state.isJumping) { state.isJumping = true; state.yVel = 0.45; }
+        });
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
