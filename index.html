@@ -3,23 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Anshu Runner | Pro Edition</title>
+    <title>ANSHU RUNNER | PRO EDITION — GLB FIXED</title>
     
-    <!-- EXTERNAL ASSETS (CDN) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- THREE.JS & ESSENTIAL LIBRARIES (MODERN JSM) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
-
-        :root {
-            --ios-blue: #007AFF;
-            --ios-bg: #F2F2F7;
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -27,19 +28,15 @@
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
-
         body {
             font-family: 'Outfit', sans-serif;
-            background-color: #000;
+            background: #000;
             overflow: hidden;
             color: #1C1C1E;
         }
+        canvas { display: block; }
 
-        canvas {
-            display: block;
-        }
-
-        /* --- LOADING SCREEN --- */
+        /* LOADER SCREEN */
         #loader-ui {
             position: fixed;
             inset: 0;
@@ -51,630 +48,650 @@
             justify-content: center;
             padding: 20px;
         }
-
         .progress-container {
             width: 80%;
             max-width: 300px;
-            height: 6px;
+            height: 8px;
             background: #E5E5EA;
             border-radius: 10px;
             margin-top: 20px;
             overflow: hidden;
         }
-
         #progress-bar {
             width: 0%;
             height: 100%;
-            background: var(--ios-blue);
-            transition: width 0.3s ease;
+            background: #007AFF;
+            transition: width 0.2s ease;
         }
-
         #debug-log {
             margin-top: 20px;
             font-size: 10px;
             color: #8E8E93;
             font-family: monospace;
-            max-height: 100px;
+            max-height: 120px;
             overflow-y: auto;
-            width: 100%;
+            width: 90%;
             text-align: center;
+            background: #f5f5f7;
+            border-radius: 16px;
+            padding: 8px;
         }
-
-        /* --- UI GLASSMORPHISM --- */
         .glass {
             background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255,255,255,0.3);
         }
-
         .btn-primary {
-            background: var(--ios-blue);
+            background: #007AFF;
             color: white;
-            border-radius: 20px;
-            padding: 18px 0;
+            border-radius: 30px;
+            padding: 16px 0;
             font-weight: 800;
             width: 100%;
             font-size: 1.2rem;
-            box-shadow: 0 10px 20px rgba(0, 122, 255, 0.3);
+            box-shadow: 0 8px 20px rgba(0,122,255,0.3);
             transition: transform 0.1s;
         }
-
-        .btn-primary:active {
-            transform: scale(0.95);
-        }
-
-        /* --- CHARACTER SHOP --- */
+        .btn-primary:active { transform: scale(0.97); }
         .char-card {
             background: #F2F2F7;
-            border-radius: 24px;
+            border-radius: 28px;
             padding: 15px;
-            width: 100px;
+            width: 110px;
             flex-shrink: 0;
             border: 3px solid transparent;
-            transition: all 0.3s ease;
+            transition: all 0.2s;
+            cursor: pointer;
         }
-
         .char-card.selected {
-            border-color: var(--ios-blue);
+            border-color: #007AFF;
             background: white;
+            transform: scale(1.02);
         }
-
-        /* --- SCREEN STATES --- */
         .screen {
             position: fixed;
             inset: 0;
             display: flex;
             flex-direction: column;
             z-index: 100;
-            padding: 40px 20px;
+            padding: 40px 24px;
         }
-
         .hidden { display: none !important; }
-
         #jump-btn {
             position: fixed;
-            bottom: 40px;
+            bottom: 30px;
             right: 20px;
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            background: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(12px);
             border: 2px solid white;
-            z-index: 10;
+            z-index: 20;
+        }
+        .particle-effect {
+            position: fixed;
+            pointer-events: none;
+            z-index: 200;
+        }
+        @keyframes coinPop {
+            0% { transform: scale(0.2); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; top: -30px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- 1. LOADER -->
-    <div id="loader-ui">
-        <h1 class="text-4xl font-black italic tracking-tighter">ANSHU RUNNER</h1>
-        <div class="progress-container">
-            <div id="progress-bar"></div>
-        </div>
-        <p id="load-text" class="mt-4 font-bold text-gray-400 text-xs uppercase tracking-widest">Checking Files...</p>
-        <div id="debug-log"></div>
-        <button id="skip-btn" onclick="forceStart()" class="hidden mt-6 px-6 py-2 bg-gray-100 rounded-full text-xs font-bold uppercase">Skip & Play</button>
-    </div>
+<div id="loader-ui">
+    <h1 class="text-5xl font-black italic tracking-tighter">ANSHU RUNNER</h1>
+    <div class="progress-container"><div id="progress-bar"></div></div>
+    <p id="load-text" class="mt-4 font-bold text-gray-500 text-xs uppercase tracking-widest">LOADING .GLB ASSETS...</p>
+    <div id="debug-log">⚡ Waiting for models... (ensure .glbl files in same folder)</div>
+    <button id="skip-btn" onclick="forceStartFallback()" class="hidden mt-6 px-6 py-2 bg-gray-200 rounded-full text-xs font-bold">SKIP & FALLBACK</button>
+</div>
 
-    <!-- 2. MAIN MENU -->
-    <div id="menu-screen" class="screen bg-white hidden">
-        <div class="flex flex-col items-center flex-grow">
-            <h1 class="text-6xl font-black italic mt-10">ANSHU<br><span class="text-blue-600">RUNNER</span></h1>
-            <div class="mt-4 glass px-6 py-2 rounded-full font-bold text-sm">HIGH SCORE: <span id="high-score-ui">0</span></div>
-            
-            <!-- Character Selection -->
-            <div class="w-full mt-auto mb-10 overflow-x-auto">
-                <div class="flex gap-4 px-4 py-4">
-                    <div onclick="selectChar(1)" id="card-1" class="char-card text-center clickable">
-                        <div class="h-16 flex items-center justify-center text-4xl">🏃</div>
-                        <p class="mt-2 text-[10px] font-bold">ANSHU</p>
-                        <p class="text-[10px] text-blue-500 font-bold">FREE</p>
-                    </div>
-                    <div onclick="selectChar(2)" id="card-2" class="char-card text-center clickable relative">
-                        <div id="lock-2" class="absolute top-1 right-1">🔒</div>
-                        <div class="h-16 flex items-center justify-center text-4xl">🏄</div>
-                        <p class="mt-2 text-[10px] font-bold">SURFER</p>
-                        <p class="text-[10px] text-blue-500 font-bold">🪙 500</p>
-                    </div>
-                    <div onclick="selectChar(3)" id="card-3" class="char-card text-center clickable relative">
-                        <div id="lock-3" class="absolute top-1 right-1">🔒</div>
-                        <div class="h-16 flex items-center justify-center text-4xl">🤖</div>
-                        <p class="mt-2 text-[10px] font-bold">BOT</p>
-                        <p class="text-[10px] text-blue-500 font-bold">🪙 1000</p>
-                    </div>
+<!-- MAIN MENU -->
+<div id="menu-screen" class="screen bg-white hidden">
+    <div class="flex flex-col items-center flex-grow">
+        <h1 class="text-6xl font-black italic mt-8">ANSHU<br><span class="text-blue-600">RUNNER</span></h1>
+        <div class="mt-4 glass px-6 py-2 rounded-full font-bold text-sm">🏆 HIGH SCORE: <span id="high-score-ui">0</span></div>
+        
+        <div class="w-full mt-auto mb-6 overflow-x-auto">
+            <div class="flex gap-4 px-4 py-4 justify-center">
+                <div onclick="selectCharacter(1)" id="card-1" class="char-card text-center">
+                    <div class="h-16 flex items-center justify-center text-4xl">🏃‍♂️</div>
+                    <p class="mt-2 text-xs font-bold">ANSHU</p>
+                    <p class="text-[10px] text-blue-500">FREE</p>
+                </div>
+                <div onclick="selectCharacter(2)" id="card-2" class="char-card text-center relative">
+                    <div id="lock-2" class="absolute top-1 right-1 text-sm">🔒</div>
+                    <div class="h-16 flex items-center justify-center text-4xl">🏄‍♂️</div>
+                    <p class="mt-2 text-xs font-bold">SURFER</p>
+                    <p class="text-[10px] text-blue-500">500 🪙</p>
+                </div>
+                <div onclick="selectCharacter(3)" id="card-3" class="char-card text-center relative">
+                    <div id="lock-3" class="absolute top-1 right-1 text-sm">🔒</div>
+                    <div class="h-16 flex items-center justify-center text-4xl">🤖</div>
+                    <p class="mt-2 text-xs font-bold">BOT</p>
+                    <p class="text-[10px] text-blue-500">1000 🪙</p>
                 </div>
             </div>
         </div>
-
-        <div class="space-y-4">
-            <div class="flex justify-center items-center gap-2 mb-4">
-                <span class="text-2xl">🪙</span>
-                <span id="total-coins-ui" class="text-2xl font-black">0</span>
-            </div>
-            <button onclick="startGame()" class="btn-primary">START RUNNING</button>
-            <div class="flex gap-4">
-                <button onclick="toggleFullscreen()" class="flex-1 py-4 bg-gray-100 rounded-2xl text-xs font-bold uppercase">Fullscreen</button>
-                <button onclick="resetData()" class="flex-1 py-4 bg-gray-100 rounded-2xl text-xs font-bold uppercase text-red-500">Reset</button>
-            </div>
-        </div>
     </div>
-
-    <!-- 3. HUD -->
-    <div id="hud" class="fixed top-0 inset-x-0 p-6 flex justify-between items-start z-50 pointer-events-none hidden">
-        <div class="glass px-6 py-3 rounded-3xl shadow-lg">
-            <p class="text-[10px] font-black text-gray-400 uppercase leading-none">Score</p>
-            <p id="score-val" class="text-3xl font-black text-gray-800 leading-none mt-1">0</p>
+    <div class="space-y-4">
+        <div class="flex justify-center items-center gap-3 mb-2">
+            <span class="text-3xl">🪙</span>
+            <span id="total-coins-ui" class="text-3xl font-black">0</span>
         </div>
-        <div class="flex flex-col items-end gap-2">
-            <div class="glass px-5 py-3 rounded-2xl shadow-lg flex items-center gap-2">
-                <span class="text-xl">🪙</span>
-                <span id="session-coins" class="text-xl font-black">0</span>
-            </div>
-            <button onclick="pauseGame()" class="glass p-3 rounded-2xl pointer-events-auto">⏸️</button>
+        <button onclick="startGameSession()" class="btn-primary">🏁 START RUNNING</button>
+        <div class="flex gap-4">
+            <button onclick="toggleFullscreenMode()" class="flex-1 py-4 bg-gray-100 rounded-2xl text-xs font-bold">FULLSCREEN</button>
+            <button onclick="resetAllProgress()" class="flex-1 py-4 bg-gray-100 rounded-2xl text-xs font-bold text-red-500">RESET DATA</button>
         </div>
+        <p class="text-center text-[10px] text-gray-400 mt-2">⚡ SWIPE LEFT/RIGHT | TAP/UP TO JUMP | DOWN TO SLIDE</p>
     </div>
+</div>
 
-    <!-- 4. GAME OVER -->
-    <div id="game-over" class="screen bg-white/95 hidden text-center justify-center">
-        <h2 class="text-7xl font-black text-red-600 italic tracking-tighter mb-2">BUSTED!</h2>
-        <p class="text-gray-400 font-bold uppercase tracking-widest mb-10">The police caught you</p>
+<!-- HUD -->
+<div id="hud" class="fixed top-0 inset-x-0 p-5 flex justify-between items-start z-50 pointer-events-none hidden">
+    <div class="glass px-5 py-2 rounded-3xl shadow">
+        <p class="text-[9px] font-black text-gray-500">SCORE</p>
+        <p id="score-val" class="text-3xl font-black text-gray-800">0</p>
+    </div>
+    <div class="flex flex-col items-end gap-2">
+        <div class="glass px-4 py-2 rounded-2xl flex items-center gap-2">
+            <span>🪙</span><span id="session-coins" class="text-xl font-black">0</span>
+        </div>
+        <button onclick="pauseGameHandler()" class="glass p-2 rounded-xl pointer-events-auto text-xl">⏸️</button>
+    </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="game-over" class="screen bg-white/95 hidden text-center justify-center">
+    <h2 class="text-7xl font-black text-red-600 italic">BUSTED!</h2>
+    <p class="text-gray-400 font-bold mt-2">POLICE CAUGHT YOU</p>
+    <div class="grid grid-cols-2 gap-5 my-10">
+        <div class="bg-gray-50 p-5 rounded-3xl"><p class="text-xs text-gray-400">SCORE</p><p id="final-score" class="text-3xl font-black">0</p></div>
+        <div class="bg-gray-50 p-5 rounded-3xl"><p class="text-xs text-gray-400">COINS</p><p id="final-coins" class="text-3xl font-black">0</p></div>
+    </div>
+    <button onclick="location.reload()" class="btn-primary mb-4">🏃 TRY AGAIN</button>
+    <button onclick="location.reload()" class="w-full py-4 font-bold text-gray-500">EXIT TO MENU</button>
+</div>
+
+<div id="game-container" style="position:fixed; inset:0;"></div>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    
+    // ---------- CRITICAL: FIXED PATHS & EXTENSIONS (.glbl as per screenshot) ----------
+    const ASSET_PATH = "./";     // same folder as index.html
+    const MODEL_EXT = ".glbl";   // 🔥 FIX: users files are .glbl not .glb
+    
+    // ----- GLOBAL CONFIG -----
+    const LANE_POSITIONS = [-3.5, 0, 3.5];
+    const GROUND_SEGMENT_LEN = 18;
+    const OBSTACLE_SPAWN_RATE = 0.32;
+    
+    // Game state
+    let gameActive = false;
+    let currentScore = 0;
+    let sessionCoinsCollected = 0;
+    let currentLaneIndex = 1;
+    let currentSpeed = 0.68;
+    let isJumping = false;
+    let verticalVelocity = 0;
+    let isSliding = false;
+    let slideTimer = null;
+    let playerModel = null;
+    let policeCar = null;
+    let clock = new THREE.Clock();
+    
+    // Three.js essentials
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b2b44);
+    scene.fog = new THREE.FogExp2(0x0b2b44, 0.008);
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.2, 200);
+    camera.position.set(0, 5.5, 11);
+    camera.lookAt(0, 2, 0);
+    
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.getElementById('game-container').appendChild(renderer.domElement);
+    
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0x404060);
+    scene.add(ambientLight);
+    const mainLight = new THREE.DirectionalLight(0xfff5e0, 1.4);
+    mainLight.position.set(6, 12, 5);
+    mainLight.castShadow = true;
+    mainLight.receiveShadow = true;
+    mainLight.shadow.mapSize.width = 1024;
+    mainLight.shadow.mapSize.height = 1024;
+    scene.add(mainLight);
+    const fillLight = new THREE.PointLight(0x4466cc, 0.5);
+    fillLight.position.set(0, 4, 0);
+    scene.add(fillLight);
+    const backLight = new THREE.PointLight(0xffaa66, 0.4);
+    backLight.position.set(0, 3, -5);
+    scene.add(backLight);
+    
+    // Groups
+    const worldGroup = new THREE.Group();
+    const obstacleGroup = new THREE.Group();
+    scene.add(worldGroup, obstacleGroup);
+    
+    // --- ASSET LOADER (GLB with .glbl) ---
+    const modelsCache = new Map(); // id -> THREE.Group
+    const filesToLoad = [
+        { id: 'player1', file: 'player1' + MODEL_EXT },
+        { id: 'player2', file: 'player2' + MODEL_EXT },
+        { id: 'player3', file: 'player3' + MODEL_EXT },
+        { id: 'police', file: 'police' + MODEL_EXT },
+        { id: 'train', file: 'train' + MODEL_EXT },
+        { id: 'coin', file: 'Coin' + MODEL_EXT },   // exact as screenshot: Coin.glbl
+        { id: 'building1', file: 'building1' + MODEL_EXT },
+        { id: 'building2', file: 'building2' + MODEL_EXT },
+        { id: 'track', file: 'track' + MODEL_EXT }
+    ];
+    
+    let loadedCount = 0;
+    const totalModels = filesToLoad.length;
+    const debugLog = document.getElementById('debug-log');
+    function addLog(msg) { debugLog.innerHTML += `✓ ${msg}<br>`; debugLog.scrollTop = debugLog.scrollHeight; if(debugLog.children.length > 12) debugLog.removeChild(debugLog.children[0]); }
+    
+    function updateProgress() {
+        const percent = (loadedCount / totalModels) * 100;
+        document.getElementById('progress-bar').style.width = percent + '%';
+        document.getElementById('load-text').innerText = `LOADING MODELS... ${Math.floor(percent)}%`;
+    }
+    
+    const loader = new GLTFLoader();
+    function createFallbackModel(id) {
+        const group = new THREE.Group();
+        let geometry, material;
+        if(id.includes('player')) { geometry = new THREE.BoxGeometry(0.9, 1.6, 0.9); material = new THREE.MeshStandardMaterial({ color: 0x3a86ff }); }
+        else if(id === 'coin') { geometry = new THREE.CylinderGeometry(0.45, 0.45, 0.15, 16); material = new THREE.MeshStandardMaterial({ color: 0xffcc44, emissive: 0x442200 }); group.rotation.x = Math.PI/2; }
+        else if(id === 'train') { geometry = new THREE.BoxGeometry(2.4, 2.2, 5); material = new THREE.MeshStandardMaterial({ color: 0xcc3333 }); }
+        else if(id === 'police') { geometry = new THREE.BoxGeometry(1.2, 1.2, 2.2); material = new THREE.MeshStandardMaterial({ color: 0x2255ff }); }
+        else { geometry = new THREE.BoxGeometry(1.8, 1.8, 1.8); material = new THREE.MeshStandardMaterial({ color: 0x88aaff }); }
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        group.add(mesh);
+        addLog(`⚠️ Fallback created for ${id}`);
+        return group;
+    }
+    
+    filesToLoad.forEach(item => {
+        loader.load(ASSET_PATH + item.file, 
+            (gltf) => {
+                const model = gltf.scene;
+                model.traverse(node => { if(node.isMesh) { node.castShadow = true; node.receiveShadow = true; } });
+                modelsCache.set(item.id, model);
+                loadedCount++;
+                addLog(`✅ Loaded: ${item.file}`);
+                updateProgress();
+                if(loadedCount === totalModels) onAllModelsLoaded();
+            },
+            (xhr) => {},
+            (error) => {
+                console.error(`Failed ${item.file}`, error);
+                addLog(`❌ Failed ${item.file} → using placeholder`);
+                modelsCache.set(item.id, createFallbackModel(item.id));
+                loadedCount++;
+                updateProgress();
+                if(loadedCount === totalModels) onAllModelsLoaded();
+            }
+        );
+    });
+    
+    // Timer to force start after 6 secs if some models stuck
+    setTimeout(() => {
+        if(loadedCount < totalModels && !window._menuInitialized) {
+            addLog("⚠️ Force start: using fallbacks for missing models");
+            filesToLoad.forEach(item => { if(!modelsCache.has(item.id)) modelsCache.set(item.id, createFallbackModel(item.id)); });
+            onAllModelsLoaded();
+        }
+    }, 6500);
+    
+    // ----- World construction (infinite tile system) -----
+    let activeTiles = [];
+    function buildTile(zPos) {
+        const tileGroup = new THREE.Group();
+        // Track piece
+        const trackModel = modelsCache.get('track');
+        if(trackModel) {
+            const trackPiece = trackModel.clone();
+            trackPiece.position.y = -0.1;
+            tileGroup.add(trackPiece);
+        } else {
+            const groundPlane = new THREE.Mesh(new THREE.PlaneGeometry(12, GROUND_SEGMENT_LEN), new THREE.MeshStandardMaterial({ color: 0x2c2e3a, roughness: 0.7 }));
+            groundPlane.rotation.x = -Math.PI/2;
+            groundPlane.receiveShadow = true;
+            tileGroup.add(groundPlane);
+            const lineMark = new THREE.Mesh(new THREE.PlaneGeometry(0.2, GROUND_SEGMENT_LEN), new THREE.MeshStandardMaterial({ color: 0xffaa55 }));
+            lineMark.rotation.x = -Math.PI/2;
+            lineMark.position.y = 0.02;
+            tileGroup.add(lineMark);
+        }
         
-        <div class="grid grid-cols-2 gap-4 mb-10">
-            <div class="bg-gray-50 p-6 rounded-[30px]">
-                <p class="text-xs font-bold text-gray-400 uppercase">Score</p>
-                <p id="final-score" class="text-3xl font-black">0</p>
-            </div>
-            <div class="bg-gray-50 p-6 rounded-[30px]">
-                <p class="text-xs font-bold text-gray-400 uppercase">Coins</p>
-                <p id="final-coins" class="text-3xl font-black">0</p>
-            </div>
-        </div>
-
-        <button onclick="location.reload()" class="btn-primary mb-4">TRY AGAIN</button>
-        <button onclick="location.reload()" class="w-full py-5 font-bold text-gray-400">EXIT TO MENU</button>
-    </div>
-
-    <div id="game-container"></div>
-
-    <script>
-        /**
-         * GLOBAL CONFIG & STATE
-         */
-        const LANE_WIDTH = 4;
-        const LANES = [-LANE_WIDTH, 0, LANE_WIDTH];
-        const ASSET_PATH = "./"; // Root folder on GitHub
-
-        let state = {
-            coins: parseInt(localStorage.getItem('anshu_coins')) || 0,
-            highScore: parseInt(localStorage.getItem('anshu_highScore')) || 0,
-            unlocked: JSON.parse(localStorage.getItem('anshu_unlocked')) || [1],
-            selected: parseInt(localStorage.getItem('anshu_selected')) || 1,
-            isRunning: false,
-            score: 0,
-            sessionCoins: 0,
-            currentLane: 1,
-            speed: 0.5,
-            isJumping: false,
-            yVelocity: 0,
-            isSliding: false
-        };
-
-        /**
-         * THREE.JS CORE
-         */
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
-
-        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 7, 12);
-        camera.lookAt(0, 2, 0);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        document.getElementById('game-container').appendChild(renderer.domElement);
-
-        // Lighting
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-        scene.add(hemiLight);
-
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        dirLight.position.set(5, 15, 5);
-        dirLight.castShadow = true;
-        dirLight.shadow.camera.left = -20;
-        dirLight.shadow.camera.right = 20;
-        dirLight.shadow.camera.top = 20;
-        dirLight.shadow.camera.bottom = -20;
-        scene.add(dirLight);
-
-        const worldGroup = new THREE.Group();
-        const obstacleGroup = new THREE.Group();
-        scene.add(worldGroup, obstacleGroup);
-
-        /**
-         * ASSET LOADER SYSTEM
-         */
-        const models = {};
-        const manager = new THREE.LoadingManager();
-        const loader = new THREE.GLTFLoader(manager);
-
-        const filesToLoad = [
-            { id: 'player1', file: 'player1.glb' },
-            { id: 'player2', file: 'player2.glb' },
-            { id: 'player3', file: 'player3.glb' },
-            { id: 'police', file: 'police.glb' },
-            { id: 'train', file: 'train.glb' },
-            { id: 'coin', file: 'Coin.glb' }, // MATCHED CASE
-            { id: 'building1', file: 'building1.glb' },
-            { id: 'building2', file: 'building2.glb' },
-            { id: 'track', file: 'track.glb' }
-        ];
-
-        const log = (msg) => {
-            const el = document.getElementById('debug-log');
-            el.innerHTML += `> ${msg}<br>`;
-            el.scrollTop = el.scrollHeight;
-        };
-
-        manager.onStart = () => log("Starting loader...");
-        manager.onProgress = (url, loaded, total) => {
-            const progress = (loaded / total) * 100;
-            document.getElementById('progress-bar').style.width = progress + '%';
-            log(`Loaded ${loaded}/${total}: ${url.split('/').pop()}`);
-        };
-
-        manager.onLoad = () => {
-            log("All models loaded successfully!");
-            setTimeout(initMenu, 1000);
-        };
-
-        manager.onError = (url) => {
-            log(`ERROR LOADING: ${url}`);
-            document.getElementById('skip-btn').classList.remove('hidden');
-        };
-
-        // Trigger loading
-        filesToLoad.forEach(item => {
-            loader.load(ASSET_PATH + item.file, 
-                (gltf) => {
-                    models[item.id] = gltf.scene;
-                    models[item.id].traverse(n => { if(n.isMesh) n.castShadow = true; });
-                },
-                undefined,
-                (err) => {
-                    console.log("Creating fallback for " + item.id);
-                    models[item.id] = createPlaceholder(item.id);
-                }
-            );
-        });
-
-        function createPlaceholder(id) {
-            const group = new THREE.Group();
-            let geo, mat;
-            if(id.includes('player')) { geo = new THREE.BoxGeometry(1, 2, 1); mat = new THREE.MeshStandardMaterial({color: 0x007AFF}); }
-            else if(id === 'coin') { geo = new THREE.CylinderGeometry(0.5, 0.5, 0.2, 16); mat = new THREE.MeshStandardMaterial({color: 0xFFD700}); group.rotation.x = Math.PI/2; }
-            else if(id === 'train') { geo = new THREE.BoxGeometry(3, 4, 10); mat = new THREE.MeshStandardMaterial({color: 0xEE4444}); }
-            else { geo = new THREE.BoxGeometry(2, 2, 2); mat = new THREE.MeshStandardMaterial({color: 0x888888}); }
-            
-            const mesh = new THREE.Mesh(geo, mat);
-            if(id.includes('player')) mesh.position.y = 1;
-            group.add(mesh);
-            return group;
+        // Decorative buildings on sides
+        const buildingLeft = modelsCache.get('building1')?.clone() || createFallbackModel('building1');
+        buildingLeft.position.set(-7.5, 0, 0);
+        buildingLeft.scale.set(1.2, 1.2 + Math.random() * 0.6, 1.2);
+        const buildingRight = modelsCache.get('building2')?.clone() || createFallbackModel('building2');
+        buildingRight.position.set(7.5, 0, 0);
+        buildingRight.scale.set(1.2, 1.2 + Math.random() * 0.6, 1.2);
+        tileGroup.add(buildingLeft, buildingRight);
+        
+        tileGroup.position.z = zPos;
+        worldGroup.add(tileGroup);
+        activeTiles.push(tileGroup);
+        return tileGroup;
+    }
+    
+    function initWorldTiles() {
+        while(worldGroup.children.length) worldGroup.remove(worldGroup.children[0]);
+        activeTiles = [];
+        for(let i = -2; i <= 6; i++) {
+            buildTile(i * GROUND_SEGMENT_LEN);
         }
-
-        // Timer for unsticking
-        setTimeout(() => {
-            if(Object.keys(models).length < filesToLoad.length) {
-                document.getElementById('skip-btn').classList.remove('hidden');
+    }
+    
+    function updateTiles() {
+        if(!gameActive) return;
+        const deltaMove = currentSpeed;
+        for(let i = 0; i < activeTiles.length; i++) {
+            activeTiles[i].position.z += deltaMove;
+            if(activeTiles[i].position.z > 18) {
+                activeTiles[i].position.z -= (activeTiles.length * GROUND_SEGMENT_LEN);
+                // spawn random obstacles near the recycled tile
+                spawnObstaclesOnTile(activeTiles[i].position.z);
             }
-        }, 5000);
-
-        /**
-         * GAME ENGINE
-         */
-        let playerObj, policeObj, mixer;
-        const tiles = [];
-
-        function initMenu() {
-            document.getElementById('loader-ui').classList.add('hidden');
-            document.getElementById('menu-screen').classList.remove('hidden');
-            
-            state.coins = parseInt(localStorage.getItem('anshu_coins')) || 0;
-            state.highScore = parseInt(localStorage.getItem('anshu_highScore')) || 0;
-            
-            document.getElementById('total-coins-ui').innerText = state.coins;
-            document.getElementById('high-score-ui').innerText = state.highScore;
-            
+        }
+    }
+    
+    // Obstacle spawning
+    function spawnObstaclesOnTile(zPos) {
+        if(!gameActive) return;
+        const rand = Math.random();
+        if(rand < OBSTACLE_SPAWN_RATE) {
+            const laneIdx = Math.floor(Math.random() * 3);
+            const laneX = LANE_POSITIONS[laneIdx];
+            // Train obstacle (police/car barrier)
+            if(Math.random() > 0.45) {
+                const trainCopy = modelsCache.get('train')?.clone() || createFallbackModel('train');
+                trainCopy.position.set(laneX, 0.2, zPos + 2);
+                trainCopy.userData = { type: 'obstacle', damage: true };
+                trainCopy.traverse(c => c.isMesh && (c.castShadow = true));
+                obstacleGroup.add(trainCopy);
+            } else {
+                // coin cluster
+                for(let k = -1; k <= 1; k++) {
+                    const coinModel = modelsCache.get('coin')?.clone() || createFallbackModel('coin');
+                    coinModel.position.set(laneX + (k*0.8), 1.1, zPos + k*2.5);
+                    coinModel.userData = { type: 'coin', value: 10 };
+                    coinModel.traverse(c => { if(c.isMesh) { c.castShadow = true; } });
+                    obstacleGroup.add(coinModel);
+                }
+            }
+        }
+        // extra random coin bonus
+        if(Math.random() < 0.25) {
+            const bonusCoin = modelsCache.get('coin')?.clone() || createFallbackModel('coin');
+            const randomLane = LANE_POSITIONS[Math.floor(Math.random()*3)];
+            bonusCoin.position.set(randomLane, 1.1, zPos + 1);
+            bonusCoin.userData = { type: 'coin', value: 15 };
+            obstacleGroup.add(bonusCoin);
+        }
+    }
+    
+    // Player & Police setup
+    function setupPlayerAndPolice() {
+        if(playerModel) scene.remove(playerModel);
+        const selectedId = state.selectedChar;
+        const skinKey = `player${selectedId}`;
+        const skinModel = modelsCache.get(skinKey)?.clone() || createFallbackModel(skinKey);
+        playerModel = new THREE.Group();
+        playerModel.add(skinModel);
+        playerModel.position.set(LANE_POSITIONS[currentLaneIndex], 0.2, 0);
+        playerModel.castShadow = true;
+        playerModel.receiveShadow = true;
+        scene.add(playerModel);
+        
+        if(policeCar) scene.remove(policeCar);
+        policeCar = modelsCache.get('police')?.clone() || createFallbackModel('police');
+        policeCar.position.set(0, 0.1, 7.5);
+        policeCar.castShadow = true;
+        scene.add(policeCar);
+    }
+    
+    // Collision & update
+    function updateGameLogic() {
+        if(!gameActive) return;
+        // Move obstacles
+        obstacleGroup.children.forEach((obj, idx) => {
+            obj.position.z += currentSpeed;
+            // Coin rotation animation
+            if(obj.userData.type === 'coin') obj.rotation.y += 0.08;
+            // Collision detection
+            const playerPos = playerModel.position;
+            const dx = Math.abs(obj.position.x - playerPos.x);
+            const dz = Math.abs(obj.position.z - playerPos.z);
+            const dy = Math.abs(obj.position.y - playerPos.y);
+            if(dx < 1.2 && dz < 1.3 && dy < 1.5) {
+                if(obj.userData.type === 'coin') {
+                    const coinVal = obj.userData.value || 10;
+                    sessionCoinsCollected += coinVal;
+                    state.totalCoins += coinVal;
+                    document.getElementById('session-coins').innerText = sessionCoinsCollected;
+                    // floating +1 effect
+                    obstacleGroup.remove(obj);
+                    createCoinParticleEffect(obj.position.clone());
+                } else if(obj.userData.type === 'obstacle' || obj.userData.damage) {
+                    gameOverSequence();
+                }
+            }
+            if(obj.position.z > 20 || obj.position.z < -25) obstacleGroup.remove(obj);
+        });
+        
+        // Lane interpolation
+        const targetX = LANE_POSITIONS[currentLaneIndex];
+        playerModel.position.x += (targetX - playerModel.position.x) * 0.25;
+        
+        // Jump physics
+        if(isJumping) {
+            playerModel.position.y += verticalVelocity;
+            verticalVelocity -= 0.025;
+            if(playerModel.position.y <= 0.1) {
+                playerModel.position.y = 0.1;
+                isJumping = false;
+                verticalVelocity = 0;
+            }
+        } else if(isSliding) {
+            playerModel.scale.y = 0.5;
+            playerModel.position.y = 0.1;
+        } else {
+            playerModel.scale.y = 1;
+            playerModel.position.y = 0.2;
+        }
+        
+        // Camera follow & police chase
+        camera.position.x += (playerModel.position.x * 0.35 - camera.position.x) * 0.08;
+        camera.position.z = 10 + (playerModel.position.z * 0.02);
+        camera.lookAt(playerModel.position.x * 0.6, 1.5, playerModel.position.z - 3);
+        if(policeCar) {
+            policeCar.position.x += (playerModel.position.x - policeCar.position.x) * 0.05;
+            policeCar.position.z = 7.5 + Math.sin(Date.now() * 0.008) * 0.6;
+        }
+        
+        // Score increment
+        currentScore += Math.floor(currentSpeed * 2.2);
+        document.getElementById('score-val').innerText = Math.floor(currentScore / 8);
+        // Speed gradually increase
+        if(currentSpeed < 1.9) currentSpeed += 0.0008;
+    }
+    
+    function createCoinParticleEffect(pos) {
+        const geom = new THREE.SphereGeometry(0.12, 6, 6);
+        const material = new THREE.MeshStandardMaterial({ color: 0xffaa33, emissive: 0x442200 });
+        for(let i=0;i<6;i++) {
+            const particle = new THREE.Mesh(geom, material);
+            particle.position.copy(pos);
+            scene.add(particle);
+            gsap.to(particle.position, { y: pos.y + 1.2, x: pos.x + (Math.random()-0.5)*0.8, duration: 0.4, ease: "power1.out" });
+            gsap.to(particle.scale, { x: 0, y: 0, duration: 0.5, delay: 0.2, onComplete: () => scene.remove(particle) });
+        }
+    }
+    
+    function gameOverSequence() {
+        if(!gameActive) return;
+        gameActive = false;
+        if(state.totalCoins) localStorage.setItem('anshu_coins_pro', state.totalCoins);
+        const finalScoreVal = Math.floor(currentScore / 8);
+        if(finalScoreVal > state.highScore) {
+            state.highScore = finalScoreVal;
+            localStorage.setItem('anshu_highScore_pro', state.highScore);
+        }
+        document.getElementById('final-score').innerText = finalScoreVal;
+        document.getElementById('final-coins').innerText = sessionCoinsCollected;
+        document.getElementById('game-over').classList.remove('hidden');
+        document.getElementById('hud').classList.add('hidden');
+    }
+    
+    // ----- Animation Loop -----
+    function animate() {
+        requestAnimationFrame(animate);
+        const delta = Math.min(clock.getDelta(), 0.033);
+        if(gameActive) {
+            updateTiles();
+            updateGameLogic();
+        }
+        renderer.render(scene, camera);
+    }
+    animate();
+    
+    // ----- Game State & UI -----
+    let state = {
+        totalCoins: parseInt(localStorage.getItem('anshu_coins_pro')) || 0,
+        highScore: parseInt(localStorage.getItem('anshu_highScore_pro')) || 0,
+        unlocked: JSON.parse(localStorage.getItem('anshu_unlocked_pro')) || [1],
+        selectedChar: parseInt(localStorage.getItem('anshu_selected_pro')) || 1,
+    };
+    
+    function updateShopUI() {
+        [1,2,3].forEach(id => {
+            const card = document.getElementById(`card-${id}`);
+            const lockDiv = document.getElementById(`lock-${id}`);
+            if(state.unlocked.includes(id)) { if(lockDiv) lockDiv.classList.add('hidden'); }
+            else { if(lockDiv) lockDiv.classList.remove('hidden'); }
+            if(state.selectedChar === id) card.classList.add('selected');
+            else card.classList.remove('selected');
+        });
+        document.getElementById('total-coins-ui').innerText = state.totalCoins;
+        document.getElementById('high-score-ui').innerText = state.highScore;
+    }
+    
+    window.selectCharacter = function(id) {
+        const prices = {1:0,2:500,3:1000};
+        if(state.unlocked.includes(id)) {
+            state.selectedChar = id;
+            localStorage.setItem('anshu_selected_pro', id);
             updateShopUI();
-            setupScene();
-        }
-
-        function forceStart() {
-            log("Force starting...");
-            filesToLoad.forEach(f => {
-                if(!models[f.id]) models[f.id] = createPlaceholder(f.id);
-            });
-            initMenu();
-        }
-
-        function setupScene() {
-            // Player
-            if(playerObj) scene.remove(playerObj);
-            playerObj = new THREE.Group();
-            const skin = (models[`player${state.selected}`] || createPlaceholder('player')).clone();
-            playerObj.add(skin);
-            playerObj.position.set(0, 0, 0);
-            scene.add(playerObj);
-
-            // Police
-            if(policeObj) scene.remove(policeObj);
-            policeObj = (models['police'] || createPlaceholder('police')).clone();
-            policeObj.position.set(0, 0, 8);
-            scene.add(policeObj);
-
-            // Infinite Tiles
-            while(worldGroup.children.length > 0) worldGroup.remove(worldGroup.children[0]);
-            tiles.length = 0;
-            for(let i=0; i<10; i++) {
-                createTile(i * -20);
-            }
-        }
-
-        function createTile(z) {
-            const tile = new THREE.Group();
-            
-            // Road/Track
-            if(models['track']) {
-                tile.add(models['track'].clone());
-            } else {
-                const road = new THREE.Mesh(new THREE.PlaneGeometry(14, 20), new THREE.MeshStandardMaterial({color: 0x333333}));
-                road.rotation.x = -Math.PI/2;
-                road.receiveShadow = true;
-                tile.add(road);
-                const line = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 20), new THREE.MeshStandardMaterial({color: 0xffffff}));
-                line.rotation.x = -Math.PI/2;
-                line.position.y = 0.01;
-                tile.add(line);
-            }
-
-            // Buildings
-            if(models['building1'] && Math.random() > 0.4) {
-                const bLeft = models[Math.random() > 0.5 ? 'building1' : 'building2'].clone();
-                bLeft.position.set(-10, 0, 0);
-                bLeft.scale.set(1.5, 1 + Math.random(), 1.5);
-                tile.add(bLeft);
-
-                const bRight = models[Math.random() > 0.5 ? 'building1' : 'building2'].clone();
-                bRight.position.set(10, 0, 0);
-                bRight.scale.set(1.5, 1 + Math.random(), 1.5);
-                tile.add(bRight);
-            }
-
-            tile.position.z = z;
-            worldGroup.add(tile);
-            tiles.push(tile);
-        }
-
-        function spawnObstacles(z) {
-            const lane = LANES[Math.floor(Math.random() * 3)];
-            const type = Math.random();
-
-            if(type > 0.4) {
-                // Spawn Train
-                const train = (models['train'] || createPlaceholder('train')).clone();
-                train.position.set(lane, 0, z);
-                train.userData = { type: 'obstacle' };
-                obstacleGroup.add(train);
-            } else {
-                // Spawn Coin Row
-                for(let i=0; i<3; i++) {
-                    const coin = (models['coin'] || createPlaceholder('coin')).clone();
-                    coin.position.set(lane, 1.5, z - (i * 3));
-                    coin.userData = { type: 'coin' };
-                    obstacleGroup.add(coin);
-                }
-            }
-        }
-
-        /**
-         * GAME LOOP
-         */
-        const clock = new THREE.Clock();
-        function animate() {
-            requestAnimationFrame(animate);
-            const delta = clock.getDelta();
-
-            if(state.isRunning) {
-                state.speed += 0.0001;
-                state.score += 1;
-                document.getElementById('score-val').innerText = Math.floor(state.score/10);
-
-                // Move Tiles
-                tiles.forEach(tile => {
-                    tile.position.z += state.speed;
-                    if(tile.position.z > 25) {
-                        tile.position.z -= 200;
-                        spawnObstacles(tile.position.z);
-                    }
-                });
-
-                // Move & Check Obstacles
-                obstacleGroup.children.forEach((obj, idx) => {
-                    obj.position.z += state.speed;
-                    
-                    if(obj.userData.type === 'coin') obj.rotation.y += 0.05;
-
-                    // Collision (Simple distance check)
-                    const dX = Math.abs(obj.position.x - playerObj.position.x);
-                    const dZ = Math.abs(obj.position.z - playerObj.position.z);
-                    const dY = Math.abs(obj.position.y - playerObj.position.y);
-
-                    if(dX < 1.5 && dZ < 2 && dY < 2) {
-                        if(obj.userData.type === 'coin') {
-                            state.sessionCoins++;
-                            state.coins++;
-                            document.getElementById('session-coins').innerText = state.sessionCoins;
-                            obstacleGroup.remove(obj);
-                        } else {
-                            gameOver();
-                        }
-                    }
-
-                    if(obj.position.z > 20) obstacleGroup.remove(obj);
-                });
-
-                // Player Lane Movement
-                const targetX = LANES[state.currentLane];
-                playerObj.position.x = THREE.MathUtils.lerp(playerObj.position.x, targetX, 0.15);
-
-                // Jump Physics
-                if(state.isJumping) {
-                    playerObj.position.y += state.yVelocity;
-                    state.yVelocity -= 0.02;
-                    if(playerObj.position.y <= 0) {
-                        playerObj.position.y = 0;
-                        state.isJumping = false;
-                    }
-                }
-
-                // Camera Tilt & Follow
-                camera.position.x = THREE.MathUtils.lerp(camera.position.x, playerObj.position.x * 0.5, 0.05);
-                camera.lookAt(playerObj.position.x * 0.2, 2, -5);
-
-                // Police Chase Effect
-                policeObj.position.x = THREE.MathUtils.lerp(policeObj.position.x, playerObj.position.x, 0.05);
-                policeObj.position.z = 8 + Math.sin(Date.now() * 0.005) * 1;
-            }
-
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        /**
-         * INTERACTION LOGIC
-         */
-        function startGame() {
-            state.isRunning = true;
-            state.score = 0;
-            state.sessionCoins = 0;
-            state.speed = 0.5;
-            state.currentLane = 1;
-            
-            document.getElementById('menu-screen').classList.add('hidden');
-            document.getElementById('hud').classList.remove('hidden');
-            
-            // Reset obstacles
-            while(obstacleGroup.children.length > 0) obstacleGroup.remove(obstacleGroup.children[0]);
-        }
-
-        function gameOver() {
-            state.isRunning = false;
-            
-            // Save Progress
-            if(Math.floor(state.score/10) > state.highScore) {
-                state.highScore = Math.floor(state.score/10);
-                localStorage.setItem('anshu_highScore', state.highScore);
-            }
-            localStorage.setItem('anshu_coins', state.coins);
-
-            document.getElementById('final-score').innerText = Math.floor(state.score/10);
-            document.getElementById('final-coins').innerText = state.sessionCoins;
-            document.getElementById('game-over').classList.remove('hidden');
-            document.getElementById('hud').classList.add('hidden');
-        }
-
-        function selectChar(id) {
-            const prices = { 1: 0, 2: 500, 3: 1000 };
-            
-            if(state.unlocked.includes(id)) {
-                state.selected = id;
-                localStorage.setItem('anshu_selected', id);
-                setupScene();
+            if(gameActive === false && playerModel) setupPlayerAndPolice();
+        } else {
+            if(state.totalCoins >= prices[id]) {
+                state.totalCoins -= prices[id];
+                state.unlocked.push(id);
+                state.selectedChar = id;
+                localStorage.setItem('anshu_coins_pro', state.totalCoins);
+                localStorage.setItem('anshu_unlocked_pro', JSON.stringify(state.unlocked));
+                localStorage.setItem('anshu_selected_pro', id);
                 updateShopUI();
+                setupPlayerAndPolice();
+                Swal.fire({ title: '✨ Unlocked!', text: 'New character ready', icon: 'success', toast: true, timer: 1500 });
             } else {
-                if(state.coins >= prices[id]) {
-                    state.coins -= prices[id];
-                    state.unlocked.push(id);
-                    state.selected = id;
-                    localStorage.setItem('anshu_coins', state.coins);
-                    localStorage.setItem('anshu_unlocked', JSON.stringify(state.unlocked));
-                    localStorage.setItem('anshu_selected', id);
-                    setupScene();
-                    updateShopUI();
-                    document.getElementById('total-coins-ui').innerText = state.coins;
-                } else {
-                    Swal.fire({ title: 'Locked!', text: 'Collect more coins!', icon: 'error', confirmButtonColor: '#007AFF' });
-                }
+                Swal.fire({ title: 'Not enough coins!', text: 'Run and collect more 🪙', icon: 'warning', confirmButtonColor: '#007AFF' });
             }
         }
-
-        function updateShopUI() {
-            [1, 2, 3].forEach(id => {
-                const card = document.getElementById(`card-${id}`);
-                const lock = document.getElementById(`lock-${id}`);
-                card.classList.remove('selected');
-                if(state.selected === id) card.classList.add('selected');
-                if(state.unlocked.includes(id) && lock) lock.classList.add('hidden');
-            });
+    };
+    
+    window.startGameSession = function() {
+        document.getElementById('menu-screen').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        document.getElementById('game-over').classList.add('hidden');
+        // Reset state
+        gameActive = true;
+        currentScore = 0;
+        sessionCoinsCollected = 0;
+        currentSpeed = 0.7;
+        currentLaneIndex = 1;
+        isJumping = false;
+        isSliding = false;
+        document.getElementById('score-val').innerText = "0";
+        document.getElementById('session-coins').innerText = "0";
+        // Clear obstacles
+        while(obstacleGroup.children.length) obstacleGroup.remove(obstacleGroup.children[0]);
+        initWorldTiles();
+        setupPlayerAndPolice();
+        // initial obstacles
+        for(let i = -1; i <= 3; i++) spawnObstaclesOnTile(i * GROUND_SEGMENT_LEN);
+    };
+    
+    window.pauseGameHandler = function() {
+        if(gameActive) { gameActive = false; Swal.fire({ title: 'Paused', text: 'Tap Resume', confirmButtonText: 'RUN', showCancelButton: false, timer: 2000 }).then(()=>{ gameActive = true; }); }
+    };
+    
+    window.toggleFullscreenMode = () => { if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); else if(document.documentElement.webkitRequestFullscreen) document.documentElement.webkitRequestFullscreen(); };
+    window.resetAllProgress = () => { localStorage.clear(); location.reload(); };
+    
+    // Input handling: Keyboard & Touch
+    window.addEventListener('keydown', (e) => {
+        if(!gameActive) return;
+        if(e.key === 'ArrowLeft' && currentLaneIndex > 0) currentLaneIndex--;
+        if(e.key === 'ArrowRight' && currentLaneIndex < 2) currentLaneIndex++;
+        if(e.key === 'ArrowUp' && !isJumping && !isSliding) { isJumping = true; verticalVelocity = 0.48; }
+        if(e.key === 'ArrowDown' && !isJumping && !isSliding) { isSliding = true; if(slideTimer) clearTimeout(slideTimer); slideTimer = setTimeout(() => { isSliding = false; }, 400); }
+    });
+    let touchStartX = 0, touchStartY = 0;
+    window.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; });
+    window.addEventListener('touchend', (e) => {
+        if(!gameActive) return;
+        const diffX = e.changedTouches[0].clientX - touchStartX;
+        const diffY = e.changedTouches[0].clientY - touchStartY;
+        if(Math.abs(diffX) > Math.abs(diffY)) {
+            if(diffX > 35 && currentLaneIndex < 2) currentLaneIndex++;
+            if(diffX < -35 && currentLaneIndex > 0) currentLaneIndex--;
+        } else {
+            if(diffY < -35 && !isJumping && !isSliding) { isJumping = true; verticalVelocity = 0.48; }
+            if(diffY > 35 && !isJumping && !isSliding) { isSliding = true; if(slideTimer) clearTimeout(slideTimer); slideTimer = setTimeout(() => { isSliding = false; }, 380); }
         }
-
-        // SWIPE SYSTEM
-        let touchStartX = 0;
-        let touchStartY = 0;
-        window.addEventListener('touchstart', e => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        });
-
-        window.addEventListener('touchend', e => {
-            const dx = e.changedTouches[0].clientX - touchStartX;
-            const dy = e.changedTouches[0].clientY - touchStartY;
-
-            if(Math.abs(dx) > Math.abs(dy)) {
-                if(dx > 40 && state.currentLane < 2) state.currentLane++;
-                if(dx < -40 && state.currentLane > 0) state.currentLane--;
-            } else {
-                if(dy < -40 && !state.isJumping) {
-                    state.isJumping = true;
-                    state.yVelocity = 0.45;
-                }
-                if(dy > 40) {
-                    // Slide Logic
-                    gsap.to(playerObj.scale, { y: 0.5, duration: 0.2 });
-                    gsap.to(playerObj.scale, { y: 1, duration: 0.2, delay: 0.5 });
-                }
-            }
-        });
-
-        window.addEventListener('keydown', e => {
-            if(e.key === 'ArrowLeft' && state.currentLane > 0) state.currentLane--;
-            if(e.key === 'ArrowRight' && state.currentLane < 2) state.currentLane++;
-            if(e.key === 'ArrowUp' && !state.isJumping) { state.isJumping = true; state.yVelocity = 0.45; }
-        });
-
-        function toggleFullscreen() {
-            const doc = window.document;
-            const docEl = doc.documentElement;
-            const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
-            if(!doc.fullscreenElement) requestFullScreen.call(docEl);
-            else doc.exitFullscreen();
-        }
-
-        function resetData() {
-            localStorage.clear();
-            location.reload();
-        }
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
+    });
+    
+    function onAllModelsLoaded() {
+        document.getElementById('loader-ui').classList.add('hidden');
+        document.getElementById('menu-screen').classList.remove('hidden');
+        updateShopUI();
+        initWorldTiles();
+        setupPlayerAndPolice();
+        // pre-populate some obstacles decoration
+        for(let i = -2; i <= 4; i++) spawnObstaclesOnTile(i * GROUND_SEGMENT_LEN);
+        window._menuInitialized = true;
+        addLog("🚀 GAME READY | GLB FILES LOADED CORRECTLY (extensions .glbl)");
+    }
+    window.forceStartFallback = function() {
+        filesToLoad.forEach(item => { if(!modelsCache.has(item.id)) modelsCache.set(item.id, createFallbackModel(item.id)); });
+        onAllModelsLoaded();
+    };
+    
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
 </body>
 </html>
